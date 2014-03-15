@@ -1,0 +1,563 @@
+<project name="phpunit-manual" default="build-current" basedir=".">
+  <target name="check-current" depends="check-en-4.1,check-fr-4.1,check-ja-4.1,check-pt_br-4.1,check-zh_cn-4.1,check-en-4.0,check-fr-4.0,check-ja-4.0,check-pt_br-4.0,check-zh_cn-4.0"/>
+  <target name="build-current" depends="build-en-4.1,build-fr-4.1,build-ja-4.1,build-pt_br-4.1,build-zh_cn-4.1,build-en-4.0,build-fr-4.0,build-ja-4.0,build-pt_br-4.0,build-zh_cn-4.0"/>
+  <target name="build-old" depends="build-en-3.7,build-en-3.6,build-en-3.5,build-en-3.4,build-en-3.3,build-en-3.2,build-en-3.1,build-en-3.0,build-fr-3.7,build-fr-3.6,build-ja-3.7,build-ja-3.6,build-ja-3.5,build-ja-3.4,build-ja-3.3,build-ja-3.2,build-ja-3.1,build-ja-3.0,build-en-2.3,build-ja-2.3,build-de-2.3"/>
+
+  <property name="basedir" value="${project.basedir}" override="true"/>
+  <property name="version" value="4.1" override="true"/>
+  <property name="language" value="en" override="true"/>
+
+  <property name="generate_epub" value="true"/>
+  <property name="generate_pdf" value="true"/>
+  <property name="generate_tar_bz2" value="true"/>
+
+  <target name="check">
+    <exec dir="${basedir}" executable="xmllint" checkreturn="true" passthru="true">
+      <arg value="--noout"/>
+      <arg value="--noent"/>
+      <arg path="../src/${version}/${language}/book.xml"/>
+    </exec>
+  </target>
+
+  <target name="build">
+    <delete dir="output/${version}/${language}"/>
+    <mkdir dir="output/${version}/${language}"/>
+    <mkdir dir="figures"/>
+
+    <copy todir="output/${version}/${language}">
+      <fileset dir="assets"/>
+    </copy>
+
+    <exec dir="${basedir}" executable="xsltproc" checkreturn="true" passthru="true">
+      <arg value="--xinclude"/>
+      <arg value="--stringparam"/>
+      <arg value="base.dir"/>
+      <arg path="output/${version}/${language}/"/>
+      <arg value="--stringparam"/>
+      <arg value="l10n.gentext.language"/>
+      <arg value="${language}"/>
+      <arg path="html-chunked.xsl"/>
+      <arg path="../src/${version}/${language}/book.xml"/>
+    </exec>
+
+    <exec dir="${basedir}" executable="xsltproc" checkreturn="true">
+      <arg line="--xinclude --stringparam l10n.gentext.language ${language} --output output/${version}/${language}/phpunit-book.html html.xsl ../src/${version}/${language}/book.xml"/>
+    </exec>
+
+    <exec dir="${basedir}" executable="xsltproc" checkreturn="true">
+      <arg line="--xinclude --stringparam fop1.extensions 1 --stringparam l10n.gentext.language ${language} --output output/${version}/${language}/phpunit-book.fo fo.xsl ../src/${version}/${language}/book.xml"/>
+    </exec>
+
+    <if>
+      <equals arg1="${generate_epub}" arg2="true" />
+      <then>
+        <exec dir="${basedir}" executable="docbook-xsl/epub/bin/dbtoepub" checkreturn="true" passthru="true">
+          <arg value="-o"/>
+          <arg path="output/${version}/${language}/phpunit-book.epub"/>
+          <arg path="../src/${version}/${language}/book.xml"/>
+        </exec>
+      </then>
+    </if>
+
+    <copy todir="figures">
+      <fileset dir="../src/${version}/${language}/figures">
+        <include name="*.png"/>
+      </fileset>
+    </copy>
+
+
+    <if>
+      <equals arg1="${generate_pdf}" arg2="true" />
+      <then>
+        <exec dir="${basedir}" executable="./scripts/HighlightPDF.php">
+          <arg line="output/${version}/${language}/phpunit-book.fo"/>
+        </exec>
+
+        <exec dir="${basedir}" executable="./fop/fop">
+          <env key="FOP_OPTS" value="-Djava.util.logging.config.file=log4j.properties"/>
+          <arg line="-fo output/${version}/${language}/phpunit-book.fo -c fop.xconf -pdf output/${version}/${language}/phpunit-book.pdf"/>
+        </exec>
+
+        <delete file="output/${version}/${language}/phpunit-book.fo"/>
+      </then>
+    </if>
+
+    <move file="figures" todir="output/${version}/${language}"/>
+
+    <exec dir="${basedir}" executable="php">
+      <arg path="./scripts/webify.php"/>
+      <arg path="output/${version}/${language}"/>
+      <arg value="${language}"/>
+      <arg value="${version}"/>
+    </exec>
+
+    <if>
+      <equals arg1="${generate_tar_bz2}" arg2="true" />
+      <then>
+        <tar destfile="output/${version}/${language}/download.tar.bz2" basedir="output/${version}/${language}" compression="bzip2"/>
+      </then>
+    </if>
+  </target>
+
+  <target name="build-en-2.3" depends="check-en-2.3">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.0" depends="check-en-3.0">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.1" depends="check-en-3.1">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.2" depends="check-en-3.2">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.2"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.3" depends="check-en-3.3">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.3"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.4" depends="check-en-3.4">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.4"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.5" depends="check-en-3.5">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.5"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.6" depends="check-en-3.6">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-3.7" depends="check-en-3.7">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-4.0" depends="check-en-4.0">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-en-4.1" depends="check-en-4.1">
+    <phingcall target="build">
+      <param name="language" value="en"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-2.3" depends="check-ja-2.3">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.0" depends="check-ja-3.0">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.1" depends="check-ja-3.1">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.2" depends="check-ja-3.2">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.2"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.3" depends="check-ja-3.3">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.3"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.4" depends="check-ja-3.4">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.4"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.5" depends="check-ja-3.5">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.5"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.6" depends="check-ja-3.6">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-3.7" depends="check-ja-3.7">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-4.0" depends="check-ja-4.0">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-ja-4.1" depends="check-ja-4.1">
+    <phingcall target="build">
+      <param name="language" value="ja"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-fr-3.6" depends="check-fr-3.6">
+    <phingcall target="build">
+      <param name="language" value="fr"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="build-fr-3.7" depends="check-fr-3.7">
+    <phingcall target="build">
+      <param name="language" value="fr"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="build-fr-4.0" depends="check-fr-4.0">
+    <phingcall target="build">
+      <param name="language" value="fr"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-fr-4.1" depends="check-fr-4.1">
+    <phingcall target="build">
+      <param name="language" value="fr"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-pt_br-3.7" depends="check-pt_br-3.7">
+    <phingcall target="build">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="build-pt_br-4.0" depends="check-pt_br-4.0">
+    <phingcall target="build">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-pt_br-4.1" depends="check-pt_br-4.1">
+    <phingcall target="build">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-zh_cn-3.7" depends="check-zh_cn-3.7">
+    <phingcall target="build">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="build-zh_cn-4.0" depends="check-zh_cn-4.0">
+    <phingcall target="build">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="build-zh_cn-4.1" depends="check-zh_cn-4.1">
+    <phingcall target="build">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="build-de-2.3" depends="check-de-2.3">
+    <phingcall target="build">
+      <param name="language" value="de"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-2.3">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.0">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.1">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.2">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.2"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.3">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.3"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.4">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.4"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.5">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.5"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.6">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-3.7">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-4.0">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-en-4.1">
+    <phingcall target="check">
+      <param name="language" value="en"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-2.3">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.0">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.1">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.2">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.2"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.3">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.3"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.4">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.4"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.5">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.5"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.6">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-3.7">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-4.0">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-ja-4.1">
+    <phingcall target="check">
+      <param name="language" value="ja"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-fr-3.6">
+    <phingcall target="check">
+      <param name="language" value="fr"/>
+      <param name="version" value="3.6"/>
+    </phingcall>
+  </target>
+
+  <target name="check-fr-3.7">
+    <phingcall target="check">
+      <param name="language" value="fr"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="check-fr-4.0">
+    <phingcall target="check">
+      <param name="language" value="fr"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-fr-4.1">
+    <phingcall target="check">
+      <param name="language" value="fr"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-pt_br-3.7">
+    <phingcall target="check">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="check-pt_br-4.0">
+    <phingcall target="check">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-pt_br-4.1">
+    <phingcall target="check">
+      <param name="language" value="pt_br"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-zh_cn-3.7">
+    <phingcall target="check">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="3.7"/>
+    </phingcall>
+  </target>
+
+  <target name="check-zh_cn-4.0">
+    <phingcall target="check">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="4.0"/>
+    </phingcall>
+  </target>
+
+  <target name="check-zh_cn-4.1">
+    <phingcall target="check">
+      <param name="language" value="zh_cn"/>
+      <param name="version" value="4.1"/>
+    </phingcall>
+  </target>
+
+  <target name="check-de-2.3">
+    <phingcall target="check">
+      <param name="language" value="de"/>
+      <param name="version" value="2.3"/>
+    </phingcall>
+  </target>
+</project>
